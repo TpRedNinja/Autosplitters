@@ -86,15 +86,8 @@ state("BatmanAK", "Steam-Current"){
 	string50 sideMission18Name	: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0xA14, 0xA70, 0x0;
 	int jokerPunches			: 0x0311F508, 0x84C, 0x0, 0x5C, 0xA9C, 0x1AA8;
 	int OverallPercentage		: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x4D8, 0x36C, 0x13C; // save file percentage (0-240)
-	bool Paused					: 0x30FFF64; // 0 for not paused and 1 for when in pause menu or most wanted menu map and other stuff is still 0
-	int Cutscene				: 0x0311F508, 0x84C, 0x0, 0x108; // I dont exactly know what its tracking but it seems to be consistent that 754 and 1010 are something related to not in a cutscene.
-	/* comment on Cutscene Continued
-	* 754 seems to be consistent this is no cutscene full gameplay, 1010 is like theirs some gameplay but its transitioning into or out of a cutscene.
-	* 758 seems to be in a cutscene or for like radio comms(thats skippable) like for when you are talking to Alfred after you complete everything and knightfall is ready.
-	* 1014 seems to be also in a cutscene but for like when its un-skippable.
-	* Then there's other values like 766 and 1022 which only happen during cutscenes for like a second or so.
-	* 766 may be related to Jason being in the cutscene specially at the end of the game with the truck crashing and with him saving you from scarecrow/
-	*/
+	int bCinematicMode			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x530; // 0x05440100(88342784) is ig not cinematic mode, 0x05404100(88097024) is cinematic mode, 
+	int MidKnightFall			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0x4F4; // 0 before completeing the story 14 after completeing the story if all side missions are done otherwise its 7
 }
 
 state("BatmanAK", "Epic"){
@@ -138,8 +131,8 @@ state("BatmanAK", "Epic"){
 	string50 sideMission18Name	: 0x0318D5B8, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0xA14, 0xA70, 0x0;
 	int jokerPunches			: 0x0318D5B8, 0x84C, 0x0, 0x5C, 0xA9C, 0x1AA8;
 	int OverallPercentage		: 0x0318D5B8, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x4D8, 0x36C, 0x13C;
-	bool Paused					: 0x316DFA4;
-	int Cutscene				: 0x0318D5B8, 0x84C, 0x0, 0x108;
+	int bCinematicMode			: 0x0318D5B8, 0x84C, 0x0, 0x5C, 0x530;
+	int MidKnightFall			: 0x0318D5B8, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0x4F4;
 }
 
 startup{
@@ -306,20 +299,20 @@ update{
 		}
 	}
 	
-	if (current.storyPercentage == 100) {
-		var limit = vars.sideMissions.Count - 1; // set limit to the last index of sideMissions
-		for (int i = 0; i <= limit; i++) {
-		if (vars.CompletedSideMissions[i]) continue; // if its completed, just skip
-		
-		var MissionProgress = vars.sideMissions[i].Item1(current);
-		var MissionProgressOld = vars.sideMissions[i].Item1(old);
+	if (current.storyPercentage == 100){
+		for (int i = 0; i < vars.sideMissions.Count; i++){
+			if (vars.CompletedSideMissions[i]) continue;
 
-		if (MissionProgress != 100) continue; // if it doesn't equal 100, skip
-		if (MissionProgressOld < 0 || MissionProgressOld > 100) continue; // if the old value isn't a number from 0 to 100, skip
+			var missionProgress = vars.sideMissions[i].Item1(current);
+			var prevMissionProgress = vars.sideMissions[i].Item1(old);
 
-		// everything else is good, mark it as completed and increment the total
-		vars.CompletedSideMissions[i] = true;
-		vars.TotalSideMissionsDone++;
+			if (missionProgress != 100) continue;  // if it doesn't equal 100, skip
+			if (prevMissionProgress < 0 || prevMissionProgress > 100) continue; // if the old value isn't a number from 0 to 100, skip
+			if (current.MidKnightFall == 12) continue; // if it equals 12 which is only in the mainmenu for some reason, skip(mostly for debug purposes)
+
+			// everything else is good, mark it as completed and increment the total
+			vars.CompletedSideMissions[i] = true;
+			vars.TotalSideMissionsDone++;
 		}
 	}
 }
@@ -393,7 +386,7 @@ split{
 		}
 	}
 	// KnightFall Split
-	if (vars.TotalSideMissionsDone >= 7 && !current.Paused && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.Cutscene == 758 && old.Cutscene == 754){
+	if (vars.TotalSideMissionsDone == current.MidKnightFall && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.bCinematicMode == 0x05404100 && old.bCinematicMode != current.bCinematicMode){
 		return true;		
 	}
 	// 240% split
