@@ -86,8 +86,8 @@ state("BatmanAK", "Steam-Current"){
 	string50 sideMission18Name	: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0xA14, 0xA70, 0x0;
 	int jokerPunches			: 0x0311F508, 0x84C, 0x0, 0x5C, 0xA9C, 0x1AA8;
 	int OverallPercentage		: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x4D8, 0x36C, 0x13C; // save file percentage (0-240)
-	int bCinematicMode			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x530; // 0x05440100(88342784) is ig not cinematic mode, 0x05404100(88097024) is cinematic mode, 
-	int MidKnightFall			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0x4F4; // 0 before completeing the story 14 after completeing the story if all side missions are done otherwise its 7
+	int bCinematicMode			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x530; // Some kind of bit flags, unclear exactly what each flag represents but we can safely treat 0x05440100(88342784) as not cinematic mode, as cinematic mode - TODO: figure out what exactly these are
+	int MidKnightFall			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0x4F4; // How many side missions you need to complete to activate Knightfall, usually 7 for First Ending or 14 for Full Ending
 }
 
 state("BatmanAK", "Epic"){
@@ -147,14 +147,13 @@ startup{
 	};
 	vars.highestPercent = 0;
 	vars.TotalSideMissionsDone = 0;
-	vars.CompletedSideMissions = new List<bool>(new bool[18]); // makes sure we dont count a side mission twice as completed
+	vars.CompletedSideMissions = new List<bool>(new bool[18]); // Makes sure we don't count a side mission as completed twice
 	vars.individualHighest = new List<byte>(new byte[18]);
 
 	// This list holds all side missions as tuples where:
 	// - Item1 is a function that returns the mission progress (byte) for a given game state
 	// - Item2 is a function that returns the mission name (string) for a given game state
-	// It allows us to loop through all side missions without writing repetitive if/else chains,
-	// keeping code compact while still tracking progress and names dynamically.
+	// It allows us to loop through all side missions without writing repetitive if/else chains
 	vars.sideMissions = new List<Tuple<Func<dynamic, byte>, Func<dynamic, string>>> {
 		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission1, s => s.sideMission1Name),
 		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission2, s => s.sideMission2Name),
@@ -299,18 +298,17 @@ update{
 		}
 	}
 	
-	if (current.storyPercentage == 100){
-		for (int i = 0; i < vars.sideMissions.Count; i++){
-			if (vars.CompletedSideMissions[i]) continue;
+	if(current.storyPercentage == 100){
+		for(int i = 0; i < vars.sideMissions.Count; i++){
+			if(vars.CompletedSideMissions[i]){ continue; }
 
 			var missionProgress = vars.sideMissions[i].Item1(current);
 			var prevMissionProgress = vars.sideMissions[i].Item1(old);
 
-			if (missionProgress != 100) continue;  // if it doesn't equal 100, skip
-			if (prevMissionProgress < 0 || prevMissionProgress > 100) continue; // if the old value isn't a number from 0 to 100, skip
-			if (current.MidKnightFall == 12) continue; // if it equals 12 which is only in the mainmenu for some reason, skip(mostly for debug purposes)
-
-			// everything else is good, mark it as completed and increment the total
+			if(missionProgress != 100){ continue; }
+			if(prevMissionProgress < 0 || prevMissionProgress > 100){ continue; } // Ignore invalid mission progress values
+			if(current.MidKnightFall == 12){ continue; } // If it equals 12 which is only in the mainmenu for some reason, skip(mostly for debug purposes)
+			
 			vars.CompletedSideMissions[i] = true;
 			vars.TotalSideMissionsDone++;
 		}
@@ -385,10 +383,12 @@ split{
 			return true;
 		}
 	}
+
 	// KnightFall Split
-	if (vars.TotalSideMissionsDone == current.MidKnightFall && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.bCinematicMode == 0x05404100 && old.bCinematicMode != current.bCinematicMode){
+	if(vars.TotalSideMissionsDone == current.MidKnightFall && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.bCinematicMode == 0x05404100 && old.bCinematicMode != current.bCinematicMode){
 		return true;		
 	}
+
 	// 240% split
 	if(current.OverallPercentage == 240 && old.OverallPercentage != 240){
 		return true;
