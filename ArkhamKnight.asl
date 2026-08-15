@@ -86,6 +86,8 @@ state("BatmanAK", "Steam-Current"){
 	string50 sideMission18Name	: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0xA14, 0xA70, 0x0;
 	int jokerPunches			: 0x0311F508, 0x84C, 0x0, 0x5C, 0xA9C, 0x1AA8;
 	int OverallPercentage		: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x4D8, 0x36C, 0x13C; // save file percentage (0-240)
+	int bCinematicMode			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x530; // Some kind of bit flags, unclear exactly what each flag represents but we can safely treat 0x05440100(88342784) as not cinematic mode, and 0x05404100(88097024) as cinematic mode - TODO: figure out what exactly these are
+	int MidKnightFall			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0x4F4; // How many side missions you need to complete to activate Knightfall, usually 7 for First Ending or 14 for Full Ending
 }
 
 state("BatmanAK", "Epic"){
@@ -129,6 +131,8 @@ state("BatmanAK", "Epic"){
 	string50 sideMission18Name	: 0x0318D5B8, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0xA14, 0xA70, 0x0;
 	int jokerPunches			: 0x0318D5B8, 0x84C, 0x0, 0x5C, 0xA9C, 0x1AA8;
 	int OverallPercentage		: 0x0318D5B8, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x4D8, 0x36C, 0x13C;
+	int bCinematicMode			: 0x0318D5B8, 0x84C, 0x0, 0x5C, 0x530;
+	int MidKnightFall			: 0x0318D5B8, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0x4F4;
 }
 
 startup{
@@ -142,7 +146,34 @@ startup{
 		64, 66, 67, 68, 69, 70, 73, 75, 77, 78, 79, 80, 82, 85, 87, 89, 90, 95, 96
 	};
 	vars.highestPercent = 0;
+	vars.TotalSideMissionsDone = 0;
+	vars.CompletedSideMissions = new List<bool>(new bool[18]); // Makes sure we don't count a side mission as completed twice
 	vars.individualHighest = new List<byte>(new byte[18]);
+
+	// This list holds all side missions as tuples where:
+	// - Item1 is a function that returns the mission progress (byte) for a given game state
+	// - Item2 is a function that returns the mission name (string) for a given game state
+	// It allows us to loop through all side missions without writing repetitive if/else chains
+	vars.sideMissions = new List<Tuple<Func<dynamic, byte>, Func<dynamic, string>>> {
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission1, s => s.sideMission1Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission2, s => s.sideMission2Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission3, s => s.sideMission3Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission4, s => s.sideMission4Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission5, s => s.sideMission5Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission6, s => s.sideMission6Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission7, s => s.sideMission7Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission8, s => s.sideMission8Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission9, s => s.sideMission9Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission10, s => s.sideMission10Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission11, s => s.sideMission11Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission12, s => s.sideMission12Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission13, s => s.sideMission13Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission14, s => s.sideMission14Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission15, s => s.sideMission15Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission16, s => s.sideMission16Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission17, s => s.sideMission17Name),
+		Tuple.Create<Func<dynamic, byte>, Func<dynamic, string>>(s => s.sideMission18, s => s.sideMission18Name)
+	};
 	
 	vars.sideMissionNames = new List<string>{
 		"Firecrews", "Pyg", "Drones", "ManBat", "Azrael",
@@ -170,6 +201,8 @@ update{
 	current.timerPhase = timer.CurrentPhase;
 	if(current.timerPhase.ToString() == "Running" && old.timerPhase.ToString() == "NotRunning"){
 		// When the timer starts, reset these things
+		vars.TotalSideMissionsDone = 0;
+		vars.CompletedSideMissions = new List<bool>(new bool[18]);
 		vars.highestPercent = current.storyPercentage;
 		
 		vars.individualHighest = new List<byte>();
@@ -264,6 +297,22 @@ update{
 			vars.individualHighest.Add(0);
 		}
 	}
+	
+	if(current.storyPercentage == 100){
+		for(int i = 0; i < vars.sideMissions.Count; i++){
+			if(vars.CompletedSideMissions[i]){ continue; }
+
+			var missionProgress = vars.sideMissions[i].Item1(current);
+			var prevMissionProgress = vars.sideMissions[i].Item1(old);
+
+			if(missionProgress != 100){ continue; }
+			if(prevMissionProgress < 0 || prevMissionProgress > 100){ continue; } // Ignore invalid mission progress values
+			if(current.MidKnightFall == 12){ continue; } // If it equals 12 which is only in the mainmenu for some reason, skip(mostly for debug purposes)
+			
+			vars.CompletedSideMissions[i] = true;
+			vars.TotalSideMissionsDone++;
+		}
+	}
 }
 
 split{
@@ -334,9 +383,14 @@ split{
 			return true;
 		}
 	}
+
+	// KnightFall Split
+	if(vars.TotalSideMissionsDone >= current.MidKnightFall && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.bCinematicMode == 0x05404100 && old.bCinematicMode == 0x05440100){
+		return true;		
+	}
+
 	// 240% split
 	if(current.OverallPercentage == 240 && old.OverallPercentage != 240){
 		return true;
 	}
 }
-
