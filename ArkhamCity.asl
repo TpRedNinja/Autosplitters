@@ -164,7 +164,7 @@ split{
 	
 	//---Loads---
 	if(old.isLoading == 0 && current.isLoading == 1){
-		if(((current.chapter == 2 && current.subChapter == 2) || current.chapter > 2) && old.persistentLevel.Contains("Church")){
+		if(((current.chapter == 2 && current.subChapter == 2) || current.chapter > 2) && (old.persistentLevel.Contains("Church") || (old.persistentLevel.Contains("OW") && old.lastDoorRoom.Contains("None")))){
 			return true; //Enter Church Tower + Exit Church Revisit (100%)
 		}else if(current.chapter == 3 && current.subChapter == 2 && old.lastDoorRoom.Contains("GCPD_")){
 			return true; //Exit GCPD 1
