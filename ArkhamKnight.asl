@@ -385,7 +385,7 @@ split{
 	}
 
 	// KnightFall Split
-	if(vars.TotalSideMissionsDone == current.MidKnightFall && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.bCinematicMode == 0x05404100 && old.bCinematicMode != current.bCinematicMode){
+	if(vars.TotalSideMissionsDone >= current.MidKnightFall && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.bCinematicMode == 0x05404100 && old.bCinematicMode != current.bCinematicMode){
 		return true;		
 	}
 
