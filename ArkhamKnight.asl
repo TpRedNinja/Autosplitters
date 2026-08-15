@@ -86,7 +86,7 @@ state("BatmanAK", "Steam-Current"){
 	string50 sideMission18Name	: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0xA14, 0xA70, 0x0;
 	int jokerPunches			: 0x0311F508, 0x84C, 0x0, 0x5C, 0xA9C, 0x1AA8;
 	int OverallPercentage		: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x4D8, 0x36C, 0x13C; // save file percentage (0-240)
-	int bCinematicMode			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x530; // Some kind of bit flags, unclear exactly what each flag represents but we can safely treat 0x05440100(88342784) as not cinematic mode, as cinematic mode - TODO: figure out what exactly these are
+	int bCinematicMode			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x530; // Some kind of bit flags, unclear exactly what each flag represents but we can safely treat 0x05440100(88342784) as not cinematic mode, and 0x05404100(88097024) as cinematic mode - TODO: figure out what exactly these are
 	int MidKnightFall			: 0x0311F508, 0x84C, 0x0, 0x5C, 0x9C, 0x5AC, 0x614, 0x4F4; // How many side missions you need to complete to activate Knightfall, usually 7 for First Ending or 14 for Full Ending
 }
 
@@ -385,7 +385,7 @@ split{
 	}
 
 	// KnightFall Split
-	if(vars.TotalSideMissionsDone >= current.MidKnightFall && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.bCinematicMode == 0x05404100 && old.bCinematicMode != current.bCinematicMode){
+	if(vars.TotalSideMissionsDone >= current.MidKnightFall && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.bCinematicMode == 0x05404100 && old.bCinematicMode == 0x05440100){
 		return true;		
 	}
 
