@@ -113,7 +113,7 @@ split{
 		}else if(current.roomName == "Garden_B7"){
 			vars.ivyFlag = 1;
 			return true; // Ivy
-		}else if(current.roomName == "Visitor_C1" || current.roomName == "Visitor_B1"){
+		}else if(current.roomName == "Visitor_C1" || current.roomName == "Visitor_B1" || current.lastRoom == "Visitor_B1"){
 			if(vars.doubleTitanFlag == 1){
 				vars.doubleTitanFlag++;
 				return true; // Double Titan
