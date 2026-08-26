@@ -298,17 +298,18 @@ update{
 		}
 	}
 	
-	if(current.storyPercentage == 100){
-		for(int i = 0; i < vars.sideMissions.Count; i++){
-			if(vars.CompletedSideMissions[i]){ continue; }
+	if (current.storyPercentage == 100){
+		for (int i = 0; i < vars.sideMissions.Count; i++){
+			if (vars.CompletedSideMissions[i]) continue;
 
 			var missionProgress = vars.sideMissions[i].Item1(current);
 			var prevMissionProgress = vars.sideMissions[i].Item1(old);
 
-			if(missionProgress != 100){ continue; }
-			if(prevMissionProgress < 0 || prevMissionProgress > 100){ continue; } // Ignore invalid mission progress values
-			if(current.MidKnightFall == 12){ continue; } // If it equals 12 which is only in the mainmenu for some reason, skip(mostly for debug purposes)
-			
+			if (missionProgress != 100) continue;  // if it doesn't equal 100, skip
+			if (prevMissionProgress < 0 || prevMissionProgress > 100) continue; // if the old value isn't a number from 0 to 100, skip
+			if (current.MidKnightFall == 12) continue; // if it equals 12 which is only in the mainmenu for some reason, skip(mostly for debug purposes)
+
+			// everything else is good, mark it as completed and increment the total
 			vars.CompletedSideMissions[i] = true;
 			vars.TotalSideMissionsDone++;
 		}
@@ -385,7 +386,7 @@ split{
 	}
 
 	// KnightFall Split
-	if(vars.TotalSideMissionsDone >= current.MidKnightFall && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.bCinematicMode == 0x05404100 && old.bCinematicMode == 0x05440100){
+	if(vars.TotalSideMissionsDone >= current.MidKnightFall && current.storyPercentage == 100 && current.currentLevel == "CityZ_17" && current.bCinematicMode == 0x05404100 (old.bCinematicMode == 0x05440100 || old.bCinematicMode == 0x05406100)){
 		return true;		
 	}
 
