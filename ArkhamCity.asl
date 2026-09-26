@@ -1,5 +1,5 @@
-//Batman: Arkham City Autosplitter v4.1
-//Created by ShikenNuggets, JohnStephenEvil, and 30Puns
+//Batman: Arkham City Autosplitter v4.2
+//Created by ShikenNuggets, JohnStephenEvil, 30Puns, and TpRedNinja
 //Splits in a bunch of places for a bunch of reasons
 
 state("BatmanAC", "Steam"){
@@ -23,6 +23,12 @@ state("BatmanAC", "Steam"){
 	float DeadShotNGPlus	: 0x01263118, 0x20, 0x8C, 0xC0, 0x484, 0x34C, 0x118, 0x10;
 	float HushNGPlus 		: 0x01263118, 0x20, 0x8C, 0xC0, 0x484, 0x34C, 0x118, 0x14;
 	float NoraNGPlus		: 0x01263118, 0x20, 0x8C, 0xC0, 0x484, 0x34C, 0x118, 0x1C;
+	int currentRingingPhone	: 0x01263118, 0x20, 0x8C, 0xC0, 0x484, 0x348, 0x3F4;
+	int Zasz				: 0x01263118, 0x20, 0x8C, 0xC0, 0x484, 0x348, 0x354, 0x28;
+	int inPauseMenu			: 0x12D0548; // 1 when in pause menu, 0 when not
+	float CameraLocationX 	: 0x01263118, 0x20, 0x8C, 0x9A8, 0x48;
+	float CameraLocationY 	: 0x01263118, 0x20, 0x8C, 0x9A8, 0x4C;
+	float CameraLocationZ 	: 0x01263118, 0x20, 0x8C, 0x9A8, 0x50;
 }
 
 state("BatmanAC", "Epic"){
@@ -46,6 +52,12 @@ state("BatmanAC", "Epic"){
 	float DeadShotNGPlus	: 0x0124DD38, 0x20, 0x8C, 0xC0, 0x484, 0x34C, 0x118, 0x10;
 	float HushNGPlus 		: 0x0124DD38, 0x20, 0x8C, 0xC0, 0x484, 0x34C, 0x118, 0x14;
 	float NoraNGPlus		: 0x0124DD38, 0x20, 0x8C, 0xC0, 0x484, 0x34C, 0x118, 0x1C;
+	int currentRingingPhone	: 0x0124DD38, 0x20, 0x8C, 0xC0, 0x484, 0x348, 0x3F4;
+	int Zasz				: 0x0124DD38, 0x20, 0x8C, 0xC0, 0x484, 0x348, 0x354, 0x28;
+	//int inPauseMenu			: 0x; // need to find this value for epic version
+	float CameraLocationX 	: 0x0124DD38, 0x20, 0x8C, 0x9A8, 0x48;
+	float CameraLocationY 	: 0x0124DD38, 0x20, 0x8C, 0x9A8, 0x4C;
+	float CameraLocationZ 	: 0x0124DD38, 0x20, 0x8C, 0x9A8, 0x50;
 }
 
 startup{
@@ -66,6 +78,7 @@ startup{
 	vars.cutscenesThisChapter = 0;
 	vars.tfBossWasActive = false;
 	vars.tfSplitDone = false;
+	vars.isDoneFirstPhone = false;
 
 	// list of side missions
 	//item 1 is for ng
@@ -75,6 +88,14 @@ startup{
 		Tuple.Create<Func<dynamic, float>, Func<dynamic, float>>(s => s.HushNG, s => s.HushNGPlus),
 		Tuple.Create<Func<dynamic, float>, Func<dynamic, float>>(s => s.NoraNG, s => s.NoraNGPlus)
 	};
+
+	// a variable to check if we have control of batman.
+	// this checks to make sure all of the following values are false:
+	// loading, reloading, cutscene, main menu, and pause menu
+	// 0 is the value for false for loading, cutscene, mainmenu and pause menu variables, 1 is for false for reloading
+	vars.hasControl = false;
+	// a variable for if the xyz has changed
+	vars.XYZChanged = false;
 }
 
 init{
@@ -92,11 +113,14 @@ init{
 }
 
 update{
+	vars.XYZChanged = current.CameraLocationX != old.CameraLocationX || current.CameraLocationY != old.CameraLocationY || current.CameraLocationZ != old.CameraLocationZ;
+	vars.hasControl = current.isLoading == 0 && current.isReloading == 1 && current.cutscenePlaying == 0 && current.inPauseMenu == 0  && current.inMainMenu == 0;
 	current.timerPhase = timer.CurrentPhase;
 	if(old.timerPhase.ToString() == "NotRunning" && current.timerPhase.ToString() == "Running"){
 		vars.cutscenesThisChapter = 0;
 		vars.tfBossWasActive = false;
 		vars.tfSplitDone = false;
+		vars.isDoneFirstPhone = false;
 	}
 	
 	if(current.chapter == 9 && current.character != null && current.character.Contains("Playable_Catwoman") && current.tfBoss != 0){
@@ -264,5 +288,19 @@ split{
 		(vars.SideMissions[i].Item2(current) == 100 && vars.SideMissions[i].Item2(old) != 100)){
 			return true; //Split on any side mission being completed
 		}
+	}
+
+	//---Zasz Phone's WIP---
+	if(current.Zasz == 5 && old.Zasz != 5 && !vars.isDoneFirstPhone){
+		vars.isDoneFirstPhone = true;
+		return true; //Zasz Phone
+	} else if (current.gameState == 2 && (old.gameState == 0 || old.gameState == 3) && current.currentRingingPhone == -1 
+	&& old.currentRingingPhone != -1 && vars.hasControl == true && vars.isDoneFirstPhone == true) {
+		return true; //Split on phone ringing
+	}
+
+	//---Riddler Split---
+	if(vars.XYZChanged && current.currentLevel.Contains("Riddler_08")){
+		return true; //Split on Riddler Takedown
 	}
 }
